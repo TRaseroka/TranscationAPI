@@ -1,9 +1,27 @@
 using Npgsql;   
+using Microsoft.EntityFrameworkCore;
+using Npgsql.EntityFrameworkCore.PostgreSQL;
 using RabbitMQ.Client;
+using TransactionAggregation.Persistence;
+using TransactionAggregation.Persistence.Repositories;
+using System.Text.Json.Serialization;
+using TransactionAggregation.Persistence.Domain;
+using TransactionAggregation.Contracts;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+builder.Services.AddDbContext<TransactionDbContext>(options =>
+    options.UseNpgsql(
+        builder.Configuration.GetConnectionString("Postgres")));
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(
+        new JsonStringEnumConverter());
+});      
+ 
+
+builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();       
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
@@ -14,30 +32,6 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-// HTTPS is handled outside the container for now.
-// app.UseHttpsRedirection();
-
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild",
-    "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast = Enumerable.Range(1, 5)
-        .Select(index =>
-            new WeatherForecast
-            (
-                DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-                Random.Shared.Next(-20, 55),
-                summaries[Random.Shared.Next(summaries.Length)]
-            ))
-        .ToArray();
-
-    return forecast;
-})
-.WithName("GetWeatherForecast");
 
 
 app.MapGet("/health/postgres", async (IConfiguration configuration) =>
@@ -85,13 +79,154 @@ app.MapGet("/health/rabbitmq", async (IConfiguration configuration) =>
         status = connection.IsOpen ? "Healthy" : "Unhealthy"
     });
 });
+
+
+app.MapPost(
+    "/api/transactions/v1/",
+    async (
+        Transaction transaction,
+        ITransactionRepository repository,
+        CancellationToken cancellationToken) =>
+    {
+        if (transaction.Id == Guid.Empty)
+        {
+            transaction.Id = Guid.NewGuid();
+        }
+
+        await repository.AddAsync(
+            transaction,
+            cancellationToken);
+
+        await repository.SaveChangesAsync(
+            cancellationToken);
+
+        return Results.Created(
+            $"/api/transactions/{transaction.Id}",
+            transaction);
+    });
+    app.MapGet(
+    "/api/transactions/{id:guid}",
+    async (
+        Guid id,
+        ITransactionRepository repository,
+        CancellationToken cancellationToken) =>
+    {
+        var transaction = await repository.GetByIdAsync(
+            id,
+            cancellationToken);
+
+        return transaction is null
+            ? Results.NotFound()
+            : Results.Ok(transaction);
+    });
+
+app.MapPost(
+    "/api/transactions",
+    async (
+        Transaction transaction,
+        ITransactionRepository repository,
+        CancellationToken cancellationToken) =>
+    {
+        if (transaction.Id == Guid.Empty)
+        {
+            transaction.Id = Guid.NewGuid();
+        }
+
+        await repository.AddAsync(
+            transaction,
+            cancellationToken);
+
+        await repository.SaveChangesAsync(
+            cancellationToken);
+
+        return Results.Created(
+            $"/api/transactions/{transaction.Id}",
+            transaction);
+    });
+    app.MapGet(
+    "/api/transactions",
+    async (
+        ITransactionRepository repository,
+        CancellationToken cancellationToken) =>
+    {
+        var transactions = await repository.GetAllAsync(
+            cancellationToken);
+
+        return Results.Ok(transactions);
+    });
+   app.MapGet(
+    "/api/transactions/customer/{customerId:guid}/v1/",
+    async (
+        Guid customerId,
+        ITransactionRepository repository,
+        CancellationToken cancellationToken) =>
+    {
+        var transactions = await repository.GetByCustomerIdAsync(
+            customerId,
+            cancellationToken);
+
+        return Results.Ok(transactions);
+    });
+    app.MapGet(
+    "/api/transactions/customer/{customerId:guid}/summary",
+    async (
+        Guid customerId,
+        ITransactionRepository repository,
+        CancellationToken cancellationToken) =>
+    {
+        var summary = await repository.GetCustomerSummaryAsync(
+            customerId,
+            cancellationToken);
+
+        return Results.Ok(summary);
+    });
+    app.MapGet(
+    "/api/transactions/customer/{customerId:guid}/by-payment-method",
+    async (
+        Guid customerId,
+        ITransactionRepository repository,
+        CancellationToken cancellationToken) =>
+    {
+        var summary = await repository.GetPaymentMethodSummaryAsync(
+            customerId,
+            cancellationToken);
+
+        return Results.Ok(summary);
+    });
+
+    app.MapGet(
+    "/api/transactions/customer/{customerId:guid}/by-direction",
+    async (
+        Guid customerId,
+        ITransactionRepository repository,
+        CancellationToken cancellationToken) =>
+    {
+        var summary = await repository.GetTransactionDirectionSummaryAsync(
+            customerId,
+            cancellationToken);
+
+        return Results.Ok(summary);
+    });
+  app.MapGet(
+    "/api/transactions/customer/{customerId:guid}",
+    async (
+        Guid customerId,
+        DateTime? from,
+        DateTime? to,
+        PaymentMethod? paymentMethod,
+        TransactionDirection? direction,
+        ITransactionRepository repository,
+        CancellationToken cancellationToken) =>
+    {
+        var transactions = await repository.GetByCustomerAsync(
+            customerId,
+            from,
+            to,
+            paymentMethod,
+            direction,
+            cancellationToken);
+
+        return Results.Ok(transactions);
+    });
 app.Run();
 
-record WeatherForecast(
-    DateOnly Date,
-    int TemperatureC,
-    string? Summary)
-{
-    public int TemperatureF =>
-        32 + (int)(TemperatureC / 0.5556);
-}
