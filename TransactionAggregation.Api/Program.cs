@@ -22,14 +22,16 @@ builder.Services.ConfigureHttpJsonOptions(options =>
  
 
 builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();       
-builder.Services.AddOpenApi();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 await using (var scope = app.Services.CreateAsyncScope())
@@ -110,19 +112,6 @@ app.MapGet("/health/rabbitmq", async (IConfiguration configuration) =>
         CancellationToken cancellationToken) =>
     {
         var transactions = await repository.GetAllAsync(
-            cancellationToken);
-
-        return Results.Ok(transactions);
-    });
-   app.MapGet(
-    "/api/transactions/customer/{customerId:guid}/",
-    async (
-        Guid customerId,
-        ITransactionRepository repository,
-        CancellationToken cancellationToken) =>
-    {
-        var transactions = await repository.GetByCustomerIdAsync(
-            customerId,
             cancellationToken);
 
         return Results.Ok(transactions);
