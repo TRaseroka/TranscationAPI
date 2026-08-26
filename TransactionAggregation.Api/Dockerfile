@@ -3,6 +3,8 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
 COPY ["TransactionAggregation.Api/TransactionAggregation.Api.csproj", "TransactionAggregation.Api/"]
+COPY ["TransactionAggregation.Contracts/TransactionAggregation.Contracts.csproj", "TransactionAggregation.Contracts/"]
+COPY ["TransactionAggregation.Persistence/TransactionAggregation.Persistence.csproj", "TransactionAggregation.Persistence/"]
 
 RUN dotnet restore "TransactionAggregation.Api/TransactionAggregation.Api.csproj"
 

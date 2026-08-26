@@ -32,6 +32,12 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+await using (var scope = app.Services.CreateAsyncScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<TransactionDbContext>();
+    await dbContext.Database.MigrateAsync();
+}
+
 
 
 app.MapGet("/health/postgres", async (IConfiguration configuration) =>
@@ -81,29 +87,7 @@ app.MapGet("/health/rabbitmq", async (IConfiguration configuration) =>
 });
 
 
-app.MapPost(
-    "/api/transactions/v1/",
-    async (
-        Transaction transaction,
-        ITransactionRepository repository,
-        CancellationToken cancellationToken) =>
-    {
-        if (transaction.Id == Guid.Empty)
-        {
-            transaction.Id = Guid.NewGuid();
-        }
 
-        await repository.AddAsync(
-            transaction,
-            cancellationToken);
-
-        await repository.SaveChangesAsync(
-            cancellationToken);
-
-        return Results.Created(
-            $"/api/transactions/{transaction.Id}",
-            transaction);
-    });
     app.MapGet(
     "/api/transactions/{id:guid}",
     async (
@@ -119,30 +103,6 @@ app.MapPost(
             ? Results.NotFound()
             : Results.Ok(transaction);
     });
-
-app.MapPost(
-    "/api/transactions",
-    async (
-        Transaction transaction,
-        ITransactionRepository repository,
-        CancellationToken cancellationToken) =>
-    {
-        if (transaction.Id == Guid.Empty)
-        {
-            transaction.Id = Guid.NewGuid();
-        }
-
-        await repository.AddAsync(
-            transaction,
-            cancellationToken);
-
-        await repository.SaveChangesAsync(
-            cancellationToken);
-
-        return Results.Created(
-            $"/api/transactions/{transaction.Id}",
-            transaction);
-    });
     app.MapGet(
     "/api/transactions",
     async (
@@ -155,7 +115,7 @@ app.MapPost(
         return Results.Ok(transactions);
     });
    app.MapGet(
-    "/api/transactions/customer/{customerId:guid}/v1/",
+    "/api/transactions/customer/{customerId:guid}/",
     async (
         Guid customerId,
         ITransactionRepository repository,

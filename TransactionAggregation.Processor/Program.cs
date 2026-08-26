@@ -1,3 +1,6 @@
+using Microsoft.EntityFrameworkCore;
+using TransactionAggregation.Persistence;
+using TransactionAggregation.Persistence.Repositories;
 using TransactionAggregation.Processor;
 using TransactionAggregation.Processor.Messaging.RabbitMQ;
 
@@ -17,7 +20,15 @@ var rabbitMqOptions = new RabbitMqOptions
 };
 
 builder.Services.AddSingleton(rabbitMqOptions);
+
+builder.Services.AddDbContext<TransactionDbContext>(options =>
+    options.UseNpgsql(
+        builder.Configuration.GetConnectionString("Postgres")));
+
+builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
+
 builder.Services.AddHostedService<Worker>();
 
 var host = builder.Build();
+
 host.Run();
