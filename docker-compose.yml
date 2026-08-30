@@ -44,6 +44,8 @@ services:
 
   postgres:
     image: postgres:17
+    ports:
+    - "5432:5432"
     container_name: transaction-postgres
     restart: unless-stopped
     environment:
