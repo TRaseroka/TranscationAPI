@@ -7,6 +7,7 @@ using TransactionAggregation.Persistence.Repositories;
 using TransactionAggregation.Application.Mappings;
 
 
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<TransactionDbContext>(options =>
@@ -20,11 +21,14 @@ new JsonStringEnumConverter());
 });
 
 builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
+builder.Services.AddProblemDetails();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddAutoMapper(cfg =>
 {
     cfg.AddProfile<TransactionMappingProfile>();
 });
+
+
 
 builder.Services
     .AddControllers()
@@ -37,9 +41,7 @@ builder.Services
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-
 var app = builder.Build();
-
 app.UseExceptionHandler();
 if (app.Environment.IsDevelopment())
 {
@@ -60,4 +62,3 @@ await dbContext.Database.MigrateAsync();
 app.MapControllers();
 
 app.Run();
-

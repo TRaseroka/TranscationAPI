@@ -78,5 +78,19 @@ public async Task<ActionResult<IReadOnlyList<TransactionDirectionSummary>>> GetB
     return Ok(summary);
 }
 
+[HttpPost]
+public async Task<IActionResult> Create(
+    TransactionMessage message,
+    CancellationToken cancellationToken)
+{
+    await _service.ProcessTransaction(
+        message,
+        cancellationToken);
+
+    return CreatedAtAction(
+        nameof(GetById),
+        new { id = message.TransactionId },
+        message);
+}
 
 }
