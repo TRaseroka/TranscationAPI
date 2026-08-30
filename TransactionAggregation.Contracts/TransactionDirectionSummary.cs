@@ -1,3 +1,4 @@
+using TransactionAggregation.Domain;
 namespace TransactionAggregation.Contracts;
 
 public class TransactionDirectionSummary

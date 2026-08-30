@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using TransactionAggregation.Persistence.Domain;
+using TransactionAggregation.Domain;
 
 namespace TransactionAggregation.Persistence;
 

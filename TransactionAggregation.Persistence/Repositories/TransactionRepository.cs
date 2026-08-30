@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TransactionAggregation.Contracts;
-using TransactionAggregation.Persistence;
-using TransactionAggregation.Persistence.Domain;
+using TransactionAggregation.Domain;
+
 
 namespace TransactionAggregation.Persistence.Repositories;
 

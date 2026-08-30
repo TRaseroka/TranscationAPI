@@ -1,24 +1,16 @@
-using TransactionAggregation.Domain;
 using TransactionAggregation.Contracts;
+using TransactionAggregation.Domain;
+
+namespace TransactionAggregation.Application.Interfaces;
 
 
-
-namespace TransactionAggregation.Persistence.Repositories;
-
-public interface ITransactionRepository
-{
+public interface ITransactionService
+{   
     Task<Transaction?> GetByIdAsync(
         Guid id,
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<Transaction>> GetAllAsync(
-        CancellationToken cancellationToken = default);
-
-    Task AddAsync(
-        Transaction transaction,
-        CancellationToken cancellationToken = default);
-
-    Task SaveChangesAsync(
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<Transaction>> GetByCustomerIdAsync(
@@ -43,4 +35,7 @@ Task<IReadOnlyList<TransactionDirectionSummary>> GetTransactionDirectionSummaryA
     PaymentMethod? paymentMethod,
     TransactionDirection? direction,
     CancellationToken cancellationToken = default);
+    Task ProcessTransaction(
+        TransactionMessage message,
+        CancellationToken cancellationToken = default);
 }

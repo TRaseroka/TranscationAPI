@@ -1,10 +1,8 @@
-using TransactionAggregation.Contracts;
+﻿namespace TransactionAggregation.Domain;
 
-namespace TransactionAggregation.Processor.Contracts;
-
-public class TransactionMessage
+public class Transaction
 {
-    public Guid TransactionId { get; set; }
+    public Guid Id { get; set; }
 
     public Guid CustomerId { get; set; }
 
@@ -24,3 +22,4 @@ public class TransactionMessage
 
     public TransactionDirection Direction { get; set; }
 }
+

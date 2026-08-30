@@ -1,9 +1,9 @@
-using TransactionAggregation.Contracts;
-namespace TransactionAggregation.Persistence.Domain;
+using TransactionAggregation.Domain;
+namespace TransactionAggregation.Contracts;
 
-public class Transaction
+public class TransactionMessage
 {
-    public Guid Id { get; set; }
+    public Guid TransactionId { get; set; }
 
     public Guid CustomerId { get; set; }
 

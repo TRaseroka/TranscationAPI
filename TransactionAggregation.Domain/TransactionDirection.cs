@@ -1,4 +1,4 @@
-namespace TransactionAggregation.Contracts;
+namespace TransactionAggregation.Domain;
 
 public enum TransactionDirection
 {

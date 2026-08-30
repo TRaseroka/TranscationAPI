@@ -3,6 +3,9 @@ using TransactionAggregation.Persistence;
 using TransactionAggregation.Persistence.Repositories;
 using TransactionAggregation.Processor;
 using TransactionAggregation.Processor.Messaging.RabbitMQ;
+using TransactionAggregation.Application.Interfaces;
+using TransactionAggregation.Application.Services;
+using TransactionAggregation.Application.Mappings;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -26,6 +29,11 @@ builder.Services.AddDbContext<TransactionDbContext>(options =>
         builder.Configuration.GetConnectionString("Postgres")));
 
 builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
+builder.Services.AddScoped<ITransactionService, TransactionService>();
+builder.Services.AddAutoMapper(cfg =>
+{
+    cfg.AddProfile<TransactionMappingProfile>();
+});
 
 builder.Services.AddHostedService<Worker>();
 

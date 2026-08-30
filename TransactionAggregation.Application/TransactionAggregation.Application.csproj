@@ -3,11 +3,11 @@
   <ItemGroup>
     <ProjectReference Include="..\TransactionAggregation.Contracts\TransactionAggregation.Contracts.csproj" />
     <ProjectReference Include="..\TransactionAggregation.Domain\TransactionAggregation.Domain.csproj" />
+    <ProjectReference Include="..\TransactionAggregation.Persistence\TransactionAggregation.Persistence.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.8" />
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
+    <PackageReference Include="AutoMapper" Version="16.2.0" />
   </ItemGroup>
 
   <PropertyGroup>

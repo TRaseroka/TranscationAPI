@@ -9,11 +9,13 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.10" />
+    <PackageReference Include="Npgsql" Version="10.0.3" />
     <PackageReference Include="RabbitMQ.Client" Version="7.2.2" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\TransactionAggregation.Application\TransactionAggregation.Application.csproj" />
     <ProjectReference Include="..\TransactionAggregation.Contracts\TransactionAggregation.Contracts.csproj" />
-    <ProjectReference Include="..\TransactionAggregation.Persistence\TransactionAggregation.Persistence.csproj" />
+    <ProjectReference Include="..\TransactionAggregation.Domain\TransactionAggregation.Domain.csproj" />
   </ItemGroup>
 </Project>

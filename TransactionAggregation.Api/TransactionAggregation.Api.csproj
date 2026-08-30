@@ -19,8 +19,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\TransactionAggregation.Application\TransactionAggregation.Application.csproj" />
     <ProjectReference Include="..\TransactionAggregation.Contracts\TransactionAggregation.Contracts.csproj" />
-    <ProjectReference Include="..\TransactionAggregation.Persistence\TransactionAggregation.Persistence.csproj" />
   </ItemGroup>
 
 </Project>
