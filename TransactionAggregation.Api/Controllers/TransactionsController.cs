@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using TransactionAggregation.Application.Interfaces;
 using TransactionAggregation.Contracts;
 using TransactionAggregation.Domain;
+using TransactionAggregation.Contracts.Transactions;
 namespace TransactionAggregation.Api.Controllers;
 
 [ApiController]
@@ -17,7 +18,7 @@ public TransactionsController(ITransactionService service)
 }
 
 [HttpGet]
-public async Task<IActionResult> GetAll(
+public async Task<ActionResult<IReadOnlyList<TransactionResponseDto>>> GetAll(
     CancellationToken cancellationToken)
 {
     var transactions = await _service.GetAllAsync(
@@ -27,41 +28,22 @@ public async Task<IActionResult> GetAll(
 }
 
 [HttpGet("{id:guid}")]
-public async Task<IActionResult> GetById(
-    Guid id,
-    CancellationToken cancellationToken)
+public async Task<ActionResult<TransactionResponseDto>> GetById( Guid id, CancellationToken cancellationToken) 
 {
-    var transaction = await _service.GetByIdAsync(
-        id,
-        cancellationToken);
-
-    return transaction is null
-        ? NotFound()
-        : Ok(transaction);
+     var transaction = await _service.GetByIdAsync( id, cancellationToken); 
+   return transaction is null ?
+    NotFound() : Ok(transaction); 
 }
 
 [HttpGet("customer/{customerId:guid}")]
-public async Task<IActionResult> GetByCustomer(
-    Guid customerId,
-    DateTime? from,
-    DateTime? to,
-    PaymentMethod? paymentMethod,
-    TransactionDirection? direction,
-    CancellationToken cancellationToken)
-{
-    var transactions = await _service.GetByCustomerAsync(
-        customerId,
-        from,
-        to,
-        paymentMethod,
-        direction,
-        cancellationToken);
-
-    return Ok(transactions);
+public async Task<ActionResult<IReadOnlyList<TransactionResponseDto>>> GetByCustomer( Guid customerId, DateTime? from, DateTime? to, PaymentMethod? paymentMethod, TransactionDirection? direction, CancellationToken cancellationToken) 
+{ 
+    var transactions = await _service.GetByCustomerAsync( customerId, from, to, paymentMethod, direction, cancellationToken); 
+     return Ok(transactions);
 }
 
 [HttpGet("customer/{customerId:guid}/summary")]
-public async Task<IActionResult> GetCustomerSummary(
+public async Task<ActionResult<CustomerTransactionSummary>> GetCustomerSummary(
     Guid customerId,
     CancellationToken cancellationToken)
 {
@@ -73,7 +55,7 @@ public async Task<IActionResult> GetCustomerSummary(
 }
 
 [HttpGet("customer/{customerId:guid}/by-payment-method")]
-public async Task<IActionResult> GetByPaymentMethod(
+public async Task<ActionResult<IReadOnlyList<PaymentMethodSummary>>> GetByPaymentMethod(
     Guid customerId,
     CancellationToken cancellationToken)
 {
@@ -85,7 +67,7 @@ public async Task<IActionResult> GetByPaymentMethod(
 }
 
 [HttpGet("customer/{customerId:guid}/by-direction")]
-public async Task<IActionResult> GetByDirection(
+public async Task<ActionResult<IReadOnlyList<TransactionDirectionSummary>>> GetByDirection(
     Guid customerId,
     CancellationToken cancellationToken)
 {

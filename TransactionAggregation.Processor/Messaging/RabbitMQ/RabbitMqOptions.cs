@@ -11,4 +11,12 @@ public class RabbitMqOptions
     public string Password { get; set; } = string.Empty;
 
     public string QueueName { get; set; } = "transactions";
+
+    public string RetryQueueName { get; set; } = "transactions.retry";
+
+    public string DeadLetterQueueName { get; set; } = "transactions.dlq";
+
+    public int RetryDelayMilliseconds { get; set; } = 5000;
+
+    public int MaxRetries { get; set; } = 3;
 }

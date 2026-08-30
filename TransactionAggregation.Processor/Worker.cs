@@ -7,8 +7,7 @@ using TransactionAggregation.Application.Exceptions;
 using TransactionAggregation.Application.Interfaces;
 using TransactionAggregation.Contracts;
 using TransactionAggregation.Processor.Messaging.RabbitMQ;
-using Microsoft.EntityFrameworkCore;
-using Npgsql;
+
 
 namespace TransactionAggregation.Processor;
 
@@ -49,12 +48,37 @@ protected override async Task ExecuteAsync(
     _channel = await _connection.CreateChannelAsync(
         cancellationToken: stoppingToken);
 
+     var retryQueueName = _options.RetryQueueName;
+     var deadLetterQueueName = _options.DeadLetterQueueName;
+     var mainQueueName = _options.QueueName;
+
     await _channel.QueueDeclareAsync(
-        queue: _options.QueueName,
+        queue: mainQueueName,
         durable: true,
         exclusive: false,
         autoDelete: false,
         cancellationToken: stoppingToken);
+    await _channel.QueueDeclareAsync(
+        queue: deadLetterQueueName,
+        durable: true,
+        exclusive: false,
+        autoDelete: false,
+        cancellationToken: stoppingToken);
+
+    var retryArguments = new Dictionary<string, object?>
+    {
+    ["x-message-ttl"] = _options.RetryDelayMilliseconds,
+    ["x-dead-letter-exchange"] = string.Empty,
+    ["x-dead-letter-routing-key"] = _options.QueueName
+};
+
+    await _channel.QueueDeclareAsync(
+    queue: retryQueueName,
+    durable: true,
+    exclusive: false,
+    autoDelete: false,
+    arguments: retryArguments,
+    cancellationToken: stoppingToken);
 
     await _channel.BasicQosAsync(
         prefetchSize: 0,
@@ -123,46 +147,57 @@ protected override async Task ExecuteAsync(
                 "Processed transaction {TransactionId} successfully.",
                 message.TransactionId);
         }
-        catch (TransactionValidationException exception)
-        {
-            _logger.LogError(
-                exception,
-                "Invalid transaction message. Message will not be requeued.");
-
-            await _channel.BasicNackAsync(
-                eventArgs.DeliveryTag,
-                multiple: false,
-                requeue: false,
-                cancellationToken: stoppingToken);
-        }
-        catch (DbUpdateException exception)
-          when (exception.InnerException is PostgresException postgresException &&
-          postgresException.SqlState == "23505")
-       {
-        _logger.LogWarning(
+    catch (TransactionValidationException exception)
+    {
+     _logger.LogError(
         exception,
-        "Duplicate transaction detected. Message has already been processed.");
+        "Invalid transaction message. Message will not be requeued.");
 
-        await _channel.BasicAckAsync(
+    await _channel!.BasicNackAsync(
+        eventArgs.DeliveryTag,
+        multiple: false,
+        requeue: false,
+        cancellationToken: stoppingToken);
+     }
+    catch (TransactionDuplicateException exception)
+    {
+    _logger.LogWarning(
+        exception,
+        "Duplicate transaction detected. " +
+        "Duplicate type: {DuplicateType}. " +
+        "Message has already been processed.",
+        exception.DuplicateType);
+
+    await _channel!.BasicAckAsync(
         eventArgs.DeliveryTag,
         multiple: false,
         cancellationToken: stoppingToken);
-        }
+    }
+    catch (JsonException exception)
+   {
+    _logger.LogError(
+        exception,
+        "Invalid transaction JSON. Message will not be requeued.");
 
-        catch (Exception exception)
-        {
-            _logger.LogError(
-                exception,
-                "Error processing RabbitMQ transaction message. Message will be requeued.");
+    await _channel!.BasicNackAsync(
+        eventArgs.DeliveryTag,
+        multiple: false,
+        requeue: false,
+        cancellationToken: stoppingToken);
+   }
+   catch (Exception exception)
+    {
+    _logger.LogError(
+        exception,
+        "Error processing RabbitMQ transaction message. " +
+        "Message will be retried.");
 
-            await _channel.BasicNackAsync(
-                eventArgs.DeliveryTag,
-                multiple: false,
-                requeue: true,
-                cancellationToken: stoppingToken);
-        }
+    await RetryMessageAsync(
+        eventArgs,
+        stoppingToken);
+    }
     };
-
+  
     await _channel.BasicConsumeAsync(
         queue: _options.QueueName,
         autoAck: false,
@@ -180,7 +215,89 @@ protected override async Task ExecuteAsync(
         // Normal shutdown.
     }
 }
+private int GetRetryCount(BasicDeliverEventArgs eventArgs)
+{
+    if (eventArgs.BasicProperties?.Headers is null)
+        return 0;
 
+    if (!eventArgs.BasicProperties.Headers.TryGetValue(
+            "x-retry-count",
+            out var value))
+        return 0;
+
+    if (value is byte[] bytes &&
+        int.TryParse(
+            Encoding.UTF8.GetString(bytes),
+            out var retryCount))
+    {
+        return retryCount;
+    }
+
+    return 0;
+}
+
+private async Task RetryMessageAsync(
+    BasicDeliverEventArgs eventArgs,
+    CancellationToken cancellationToken)
+{
+    var retryCount = GetRetryCount(eventArgs);
+
+    if (retryCount >= _options.MaxRetries)
+    {
+        await _channel!.BasicPublishAsync(
+            exchange: string.Empty,
+            routingKey: _options.DeadLetterQueueName,
+            mandatory: false,
+            basicProperties: new BasicProperties
+            {
+                Persistent = true
+            },
+            body: eventArgs.Body,
+            cancellationToken: cancellationToken);
+
+        await _channel.BasicAckAsync(
+            eventArgs.DeliveryTag,
+            multiple: false,
+            cancellationToken: cancellationToken);
+
+        _logger.LogError(
+            "Maximum retry count reached. " +
+            "Transaction message moved to dead-letter queue {QueueName}.",
+            _options.DeadLetterQueueName);
+
+        return;
+    }
+
+    var nextRetryCount = retryCount + 1;
+
+    var properties = new BasicProperties
+    {
+        Persistent = true,
+        Headers = new Dictionary<string, object?>
+        {
+            ["x-retry-count"] = nextRetryCount.ToString()
+        }
+    };
+
+    await _channel!.BasicPublishAsync(
+        exchange: string.Empty,
+        routingKey: _options.RetryQueueName,
+        mandatory: false,
+        basicProperties: properties,
+        body: eventArgs.Body,
+        cancellationToken: cancellationToken);
+
+    await _channel.BasicAckAsync(
+        eventArgs.DeliveryTag,
+        multiple: false,
+        cancellationToken: cancellationToken);
+
+    _logger.LogWarning(
+        "Transaction message scheduled for retry. " +
+        "Retry attempt {RetryCount} of {MaxRetries}.",
+        nextRetryCount,
+        _options.MaxRetries);
+}
 public override async Task StopAsync(
     CancellationToken cancellationToken)
 {
