@@ -328,11 +328,3 @@ Use the provided Docker images in your Kubernetes manifests. Ensure:
 2. Write unit tests for new features
 3. Update database migrations for schema changes
 4. Update this README for significant changes
-
-## License
-
-[Add your license information here]
-
-## Support
-
-For issues or questions, please [add contact/issue tracking information]
