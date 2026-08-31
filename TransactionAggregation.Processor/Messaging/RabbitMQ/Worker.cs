@@ -7,6 +7,7 @@ using TransactionAggregation.Application.Exceptions;
 using TransactionAggregation.Application.Interfaces;
 using TransactionAggregation.Contracts;
 using TransactionAggregation.Processor.Messaging.RabbitMQ;
+using TransactionAggregation.Processor.Messaging;
 
 
 namespace TransactionAggregation.Processor;
@@ -130,11 +131,11 @@ protected override async Task ExecuteAsync(
             using var scope =
                 _scopeFactory.CreateScope();
 
-            var service =
+            var handler =
                 scope.ServiceProvider
-                    .GetRequiredService<ITransactionService>();
+                    .GetRequiredService<ITransactionMessageHandler>();
 
-            await service.ProcessTransaction(
+            await handler.HandleAsync(
                 message,
                 stoppingToken);
 

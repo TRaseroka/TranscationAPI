@@ -6,6 +6,8 @@ using TransactionAggregation.Processor.Messaging.RabbitMQ;
 using TransactionAggregation.Application.Interfaces;
 using TransactionAggregation.Application.Services;
 using TransactionAggregation.Application.Mappings;
+using TransactionAggregation.Processor.Kafka;
+using TransactionAggregation.Processor.Messaging;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -27,9 +29,12 @@ builder.Services.AddSingleton(rabbitMqOptions);
 builder.Services.AddDbContext<TransactionDbContext>(options =>
     options.UseNpgsql(
         builder.Configuration.GetConnectionString("Postgres")));
-
+builder.Services.Configure<KafkaOptions>(
+    builder.Configuration.GetSection("Kafka"));
 builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
+builder.Services.AddScoped<ITransactionMessageHandler, TransactionMessageHandler>();
+builder.Services.AddHostedService<KafkaTransactionConsumer>();
 builder.Services.AddAutoMapper(cfg =>
 {
     cfg.AddProfile<TransactionMappingProfile>();

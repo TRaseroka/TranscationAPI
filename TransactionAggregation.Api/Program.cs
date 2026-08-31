@@ -5,6 +5,7 @@ using TransactionAggregation.Application.Services;
 using TransactionAggregation.Persistence;
 using TransactionAggregation.Persistence.Repositories;
 using TransactionAggregation.Application.Mappings;
+using TransactionAggregation.Api.ExceptionHandling;
 
 
 
@@ -22,6 +23,7 @@ new JsonStringEnumConverter());
 
 builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
 builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddAutoMapper(cfg =>
 {

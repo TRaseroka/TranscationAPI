@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
 using TransactionAggregation.Application.Interfaces;
 using TransactionAggregation.Contracts;
 using TransactionAggregation.Domain;
@@ -18,7 +19,10 @@ public TransactionsController(ITransactionService service)
 }
 
 [HttpGet]
-public async Task<ActionResult<IReadOnlyList<TransactionResponseDto>>> GetAll(
+[ProducesResponseType(StatusCodes.Status200OK)]
+[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+public async Task<IActionResult> GetAll(
     CancellationToken cancellationToken)
 {
     var transactions = await _service.GetAllAsync(
@@ -28,22 +32,43 @@ public async Task<ActionResult<IReadOnlyList<TransactionResponseDto>>> GetAll(
 }
 
 [HttpGet("{id:guid}")]
-public async Task<ActionResult<TransactionResponseDto>> GetById( Guid id, CancellationToken cancellationToken) 
+[ProducesResponseType(StatusCodes.Status200OK)]
+[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+public async Task<IActionResult> GetById(
+    Guid id,
+    CancellationToken cancellationToken)
 {
-     var transaction = await _service.GetByIdAsync( id, cancellationToken); 
-   return transaction is null ?
-    NotFound() : Ok(transaction); 
+    var transaction = await _service.GetByIdAsync(
+        id,
+        cancellationToken);
+
+    if (transaction is null)
+        return NotFound();
+
+    return Ok(transaction);
 }
 
 [HttpGet("customer/{customerId:guid}")]
-public async Task<ActionResult<IReadOnlyList<TransactionResponseDto>>> GetByCustomer( Guid customerId, DateTime? from, DateTime? to, PaymentMethod? paymentMethod, TransactionDirection? direction, CancellationToken cancellationToken) 
-{ 
-    var transactions = await _service.GetByCustomerAsync( customerId, from, to, paymentMethod, direction, cancellationToken); 
-     return Ok(transactions);
+[ProducesResponseType(StatusCodes.Status200OK)]
+[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+public async Task<IActionResult> GetByCustomer(
+    Guid customerId,
+    CancellationToken cancellationToken)
+{
+    var transactions = await _service.GetByCustomerIdAsync(
+        customerId,
+        cancellationToken);
+
+    return Ok(transactions);
 }
 
 [HttpGet("customer/{customerId:guid}/summary")]
-public async Task<ActionResult<CustomerTransactionSummary>> GetCustomerSummary(
+[ProducesResponseType(StatusCodes.Status200OK)]
+[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+public async Task<IActionResult> GetCustomerSummary(
     Guid customerId,
     CancellationToken cancellationToken)
 {
@@ -55,7 +80,10 @@ public async Task<ActionResult<CustomerTransactionSummary>> GetCustomerSummary(
 }
 
 [HttpGet("customer/{customerId:guid}/by-payment-method")]
-public async Task<ActionResult<IReadOnlyList<PaymentMethodSummary>>> GetByPaymentMethod(
+[ProducesResponseType(StatusCodes.Status200OK)]
+[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+public async Task<IActionResult> GetByPaymentMethod(
     Guid customerId,
     CancellationToken cancellationToken)
 {
@@ -67,7 +95,10 @@ public async Task<ActionResult<IReadOnlyList<PaymentMethodSummary>>> GetByPaymen
 }
 
 [HttpGet("customer/{customerId:guid}/by-direction")]
-public async Task<ActionResult<IReadOnlyList<TransactionDirectionSummary>>> GetByDirection(
+[ProducesResponseType(StatusCodes.Status200OK)]
+[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+public async Task<IActionResult> GetByDirection(
     Guid customerId,
     CancellationToken cancellationToken)
 {
@@ -79,6 +110,10 @@ public async Task<ActionResult<IReadOnlyList<TransactionDirectionSummary>>> GetB
 }
 
 [HttpPost]
+[ProducesResponseType(StatusCodes.Status201Created)]
+[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
 public async Task<IActionResult> Create(
     TransactionMessage message,
     CancellationToken cancellationToken)
@@ -92,5 +127,4 @@ public async Task<IActionResult> Create(
         new { id = message.TransactionId },
         message);
 }
-
 }

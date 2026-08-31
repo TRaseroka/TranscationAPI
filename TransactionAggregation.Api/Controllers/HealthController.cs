@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Npgsql;
 using RabbitMQ.Client;
+using Confluent.Kafka;
 
 namespace TransactionAggregation.Api.Controllers;
 
@@ -84,5 +85,85 @@ public async Task<IActionResult> RabbitMq()
             : "Unhealthy"
     });
 }
+[HttpGet("kafka")]
+public async Task<IActionResult> Kafka(
+    CancellationToken cancellationToken)
+{
+    try
+    {
+        var bootstrapServers =
+            _configuration["Kafka:BootstrapServers"];
 
+        if (string.IsNullOrWhiteSpace(bootstrapServers))
+        {
+            return StatusCode(503, new
+            {
+                service = "Kafka",
+                status = "Unhealthy",
+                error = "Kafka:BootstrapServers is not configured."
+            });
+        }
+
+        var topic =
+            _configuration["Kafka:Topic"]
+            ?? "transactions";
+
+        var config = new AdminClientConfig
+        {
+            BootstrapServers = bootstrapServers
+        };
+
+        using var adminClient =
+            new AdminClientBuilder(config).Build();
+
+        var metadata = await Task.Run(
+            () => adminClient.GetMetadata(
+                topic,
+                TimeSpan.FromSeconds(5)),
+            cancellationToken);
+
+        var topicMetadata =
+            metadata.Topics.FirstOrDefault();
+
+        if (topicMetadata == null)
+        {
+            return StatusCode(503, new
+            {
+                service = "Kafka",
+                status = "Unhealthy",
+                topic,
+                error = "Topic was not found."
+            });
+        }
+
+        if (topicMetadata.Error.IsError)
+        {
+            return StatusCode(503, new
+            {
+                service = "Kafka",
+                status = "Unhealthy",
+                topic,
+                error = topicMetadata.Error.Reason
+            });
+        }
+
+        return Ok(new
+        {
+            service = "Kafka",
+            status = "Healthy",
+            brokerCount = metadata.Brokers.Count,
+            topic,
+            partitionCount = topicMetadata.Partitions.Count
+        });
+    }
+    catch (Exception ex)
+    {
+        return StatusCode(503, new
+        {
+            service = "Kafka",
+            status = "Unhealthy",
+            error = ex.Message
+        });
+    }
+}
 }
