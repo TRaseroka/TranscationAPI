@@ -8,7 +8,7 @@ using TransactionAggregation.Application.Services;
 using TransactionAggregation.Application.Mappings;
 using TransactionAggregation.Processor.Kafka;
 using TransactionAggregation.Processor.Messaging;
-
+using TransactionAggregation.Application.Serialization;
 var builder = Host.CreateApplicationBuilder(args);
 
 var rabbitMqOptions = new RabbitMqOptions
@@ -34,6 +34,7 @@ builder.Services.Configure<KafkaOptions>(
 builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<ITransactionMessageHandler, TransactionMessageHandler>();
+builder.Services.AddSingleton<TransactionXmlDeserializer>();
 builder.Services.AddHostedService<KafkaTransactionConsumer>();
 builder.Services.AddAutoMapper(cfg =>
 {

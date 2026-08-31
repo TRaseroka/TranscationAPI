@@ -6,6 +6,7 @@ using TransactionAggregation.Persistence;
 using TransactionAggregation.Persistence.Repositories;
 using TransactionAggregation.Application.Mappings;
 using TransactionAggregation.Api.ExceptionHandling;
+using TransactionAggregation.Application.Serialization;
 
 
 
@@ -25,6 +26,7 @@ builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
+builder.Services.AddScoped<TransactionXmlDeserializer>();
 builder.Services.AddAutoMapper(cfg =>
 {
     cfg.AddProfile<TransactionMappingProfile>();

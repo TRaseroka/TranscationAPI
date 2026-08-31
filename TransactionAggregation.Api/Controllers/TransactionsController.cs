@@ -55,10 +55,18 @@ public async Task<IActionResult> GetById(
 [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
 public async Task<IActionResult> GetByCustomer(
     Guid customerId,
+    DateTime? from,
+    DateTime? to,
+    PaymentMethod? paymentMethod,
+    TransactionDirection? direction,
     CancellationToken cancellationToken)
 {
-    var transactions = await _service.GetByCustomerIdAsync(
+    var transactions = await _service.GetByCustomerAsync(
         customerId,
+        from,
+        to,
+        paymentMethod,
+        direction,
         cancellationToken);
 
     return Ok(transactions);

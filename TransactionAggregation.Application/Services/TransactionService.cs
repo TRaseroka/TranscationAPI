@@ -90,6 +90,11 @@ public async Task<IReadOnlyList<TransactionResponseDto>> GetAllAsync(
     TransactionDirection? direction,
     CancellationToken cancellationToken = default)
 {
+        if (from.HasValue && to.HasValue && from > to)
+    {
+        throw new TransactionValidationException(
+            "'from' date cannot be later than 'to' date.");
+    }
     var transactions = await _repository.GetByCustomerAsync(
         customerId,
         from,
